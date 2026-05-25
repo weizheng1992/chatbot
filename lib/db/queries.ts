@@ -450,6 +450,10 @@ export async function saveSuggestions({
 }: {
   suggestions: Suggestion[];
 }) {
+  if (suggestions.length === 0) {
+    return [];
+  }
+
   try {
     return await db.insert(suggestion).values(suggestions);
   } catch (_error) {

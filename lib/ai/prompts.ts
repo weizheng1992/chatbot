@@ -45,7 +45,7 @@ CRITICAL RULES:
 `;
 
 export const weatherToolPrompt =
-  "You can use the `getWeather` tool to get current weather when the user asks about weather. Do not claim access to any other tools.";
+  "You can use the `getWeather` tool to get current weather when the user asks about weather.";
 
 export const regularPrompt = `You are a helpful assistant. Keep responses concise and direct.
 

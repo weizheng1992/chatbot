@@ -241,6 +241,46 @@ const PurePreviewMessage = ({
       );
     }
 
+    if (type === "tool-editDocument") {
+      const { toolCallId, state } = part;
+
+      if (state !== "output-available") {
+        return (
+          <Tool
+            className="w-[min(100%,450px)]"
+            defaultOpen={true}
+            key={toolCallId}
+          >
+            <ToolHeader state={state} type="tool-editDocument" />
+            <ToolContent>
+              {state === "input-available" && <ToolInput input={part.input} />}
+            </ToolContent>
+          </Tool>
+        );
+      }
+
+      if (part.output && "error" in part.output) {
+        return (
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-500 dark:bg-red-950/50"
+            key={toolCallId}
+          >
+            Error editing document: {String(part.output.error)}
+          </div>
+        );
+      }
+
+      return (
+        <div className="relative" key={toolCallId}>
+          <DocumentPreview
+            args={{ ...part.output, isUpdate: true }}
+            isReadonly={isReadonly}
+            result={part.output}
+          />
+        </div>
+      );
+    }
+
     if (type === "tool-updateDocument") {
       const { toolCallId } = part;
 

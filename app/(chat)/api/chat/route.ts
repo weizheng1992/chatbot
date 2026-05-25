@@ -19,7 +19,11 @@ import {
 } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
+import { createDocument } from "@/lib/ai/tools/create-document";
+import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
+import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
+import { updateDocument } from "@/lib/ai/tools/update-document";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -185,17 +189,47 @@ export async function POST(request: Request) {
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
+        const chatTools = supportsTools
+          ? {
+              getWeather,
+              createDocument: createDocument({
+                session,
+                dataStream,
+                modelId: chatModel,
+              }),
+              editDocument: editDocument({ session, dataStream }),
+              updateDocument: updateDocument({
+                session,
+                dataStream,
+                modelId: chatModel,
+              }),
+              requestSuggestions: requestSuggestions({
+                session,
+                dataStream,
+                modelId: chatModel,
+              }),
+            }
+          : undefined;
+
         const result = streamText({
           model: getLanguageModel(chatModel),
           system: systemPrompt({
             requestHints,
             supportsTools,
-            tools: supportsTools ? ["weather"] : [],
+            tools: supportsTools ? ["weather", "artifacts"] : [],
           }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
-          experimental_activeTools: supportsTools ? ["getWeather"] : [],
-          ...(supportsTools && { tools: { getWeather } }),
+          experimental_activeTools: supportsTools
+            ? [
+                "getWeather",
+                "createDocument",
+                "editDocument",
+                "updateDocument",
+                "requestSuggestions",
+              ]
+            : [],
+          ...(chatTools && { tools: chatTools }),
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
             functionId: "stream-text",

@@ -24,20 +24,21 @@ test.describe("Chat Page", () => {
     await expect(suggestions).toBeVisible();
   });
 
-  test("can stop generation with stop button", async ({ page }) => {
+  test("can stop generation while response is streaming", async ({ page }) => {
     await page.goto("/");
 
-    // Type and send a message
     await page.getByTestId("multimodal-input").fill("Hello");
     await page.getByTestId("send-button").click();
 
-    // Stop button should appear during generation
+    const assistantMessage = page.locator("[data-role='assistant']").first();
+    await expect(assistantMessage).toBeVisible({ timeout: 30_000 });
+
     const stopButton = page.getByTestId("stop-button");
-    // If generation starts, stop button appears
-    // This is a best-effort check since timing depends on API
-    await stopButton.click({ timeout: 5000 }).catch(() => {
-      // Generation may have finished before we could click
-    });
+    await expect(stopButton).toBeVisible();
+    await stopButton.click();
+
+    await page.getByTestId("multimodal-input").fill("Send again");
+    await expect(page.getByTestId("send-button")).toBeEnabled();
   });
 });
 
