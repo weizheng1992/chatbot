@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: chatbot-db-prod
+    restart: always
+    environment:
+      POSTGRES_USER: chatbot
+      POSTGRES_PASSWORD: chatbot_password
+      POSTGRES_DB: chatbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatbot -d chatbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatbot-redis-prod
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatbot-app-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_URL=postgres://chatbot:chatbot_password@db:5432/chatbot
+      - REDIS_URL=redis://redis:6379
+      # Base configurations
+      - AUTH_SECRET=${AUTH_SECRET:-some-random-secret-at-least-32-chars-long}
+      - COMPANY_AI_BASE_URL=${COMPANY_AI_BASE_URL:-http://localhost:11211/api/openai/v1}
+      - COMPANY_AI_API_KEY=${COMPANY_AI_API_KEY:-dummy}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://localhost:11434/v1}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-ollama}
+      - AI_MODEL=${AI_MODEL:-company/gemini-3.1-pro-preview:latest}
+      - NEXT_PUBLIC_AI_MODEL=${NEXT_PUBLIC_AI_MODEL:-company/gemini-3.1-pro-preview:latest}
+
+volumes:
+  pgdata:
+  redisdata:
